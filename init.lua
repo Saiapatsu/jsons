@@ -144,10 +144,29 @@ end
 ----------------------------------------
 
 local print = _G.print
+
+function inValue(get, type, value)
+	if type == "array" then
+		print("[")
+		for type, value in get do
+			inValue(get, type, value)
+		end
+		print("]")
+	elseif type == "object" then
+		print("{")
+		for _, key in get do
+			local type, value = get()
+			print(key .. ":")
+			inValue(get, type, value)
+		end
+		print("}")
+	else
+		print(value)
+	end
+end
+
 print()
 local parseJson = coroutine.wrap(parseJson)
--- parseJson('[1, 2, {"foo": 2, "bar": [3,  2, 1]}]', 1)
-parseJson(editor:GetText(), 1)
-for i = 1,100 do
-	print(parseJson())
-end
+parseJson('["foobar", "barfoo", {"foo": 1, "bar": null}]', 1)
+-- parseJson(editor:GetText(), 1)
+inValue(parseJson, parseJson())
