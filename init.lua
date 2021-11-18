@@ -11,11 +11,26 @@ end
 
 ----------------------------------------
 
+local
+	parseJson,
+	parseWhitespace,
+	parseValue,
+	parseObject,
+	parseArray,
+	parseString,
+	parseNumber,
+	parseOther,
+	parseMembers,
+	parseElements,
+	parseMember,
+	parseElement
+
+----------------------------------------
+
 function parseJson(str, where)
 	coroutine.yield() -- wait for arguments
 	print("parseJson", where)
-	where = parseElement(str, where)
-	return where
+	return parseElement(str, where)
 end
 
 ----------------------------------------
@@ -143,19 +158,17 @@ end
 
 ----------------------------------------
 
-local print = _G.print
 local function line(level) return "\n" .. string.rep("\t", level) end
-
-function inValue(print, level, get, type, value)
+local function pretty(print, level, get, type, value)
 	if type == "array" then
 		print("[")
 		type, value = get()
 		if type ~= nil then
 			print(line(level + 1))
-			inValue(print, level + 1, get, type, value)
+			pretty(print, level + 1, get, type, value)
 			for type, value in get do
 				print("," .. line(level + 1))
-				inValue(print, level + 1, get, type, value)
+				pretty(print, level + 1, get, type, value)
 			end
 			print(line(level))
 		end
@@ -168,11 +181,11 @@ function inValue(print, level, get, type, value)
 			type, value = get()
 			print(line(level + 1))
 			print(key .. ": ")
-			inValue(print, level + 1, get, type, value)
+			pretty(print, level + 1, get, type, value)
 			for _, key in get do
 				type, value = get()
 				print("," .. line(level + 1) .. key .. ": ")
-				inValue(print, level + 1, get, type, value)
+				pretty(print, level + 1, get, type, value)
 			end
 			print(line(level))
 		end
@@ -183,6 +196,11 @@ function inValue(print, level, get, type, value)
 	end
 end
 
+----------------------------------------
+
+-- testing
+--[[
+local print = _G.print
 print()
 local parseJson = coroutine.wrap(parseJson)
 parseJson('["foobar", [], "barfoo", {"foo": 1, "bar": null}]', 1)
@@ -190,3 +208,27 @@ parseJson('["foobar", [], "barfoo", {"foo": 1, "bar": null}]', 1)
 local rope = {}
 inValue(function(x) return table.insert(rope, x) end, 0, parseJson, parseJson())
 print(table.concat(rope))
+]]
+
+----------------------------------------
+
+local jsons = {}
+
+function jsons.parser(str, where)
+	local parser = coroutine.wrap(parseJson)
+	parser(str, where or 1)
+	return parser
+end
+
+function jsons.pretty(parser)
+	local rope = {}
+	pretty(
+		function(x) return table.insert(rope, x) end,
+		0,
+		parser,
+		parser()
+	)
+	return table.concat(rope)
+end
+
+return jsons
