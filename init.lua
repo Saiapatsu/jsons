@@ -144,22 +144,40 @@ end
 ----------------------------------------
 
 local print = _G.print
+local function line(level) return "\n" .. string.rep("\t", level) end
 
-function inValue(get, type, value)
+function inValue(print, level, get, type, value)
 	if type == "array" then
 		print("[")
-		for type, value in get do
-			inValue(get, type, value)
+		type, value = get()
+		if type ~= nil then
+			print(line(level + 1))
+			inValue(print, level + 1, get, type, value)
+			for type, value in get do
+				print("," .. line(level + 1))
+				inValue(print, level + 1, get, type, value)
+			end
+			print(line(level))
 		end
 		print("]")
+		
 	elseif type == "object" then
 		print("{")
-		for _, key in get do
-			local type, value = get()
-			print(key .. ":")
-			inValue(get, type, value)
+		local _, key = get()
+		if key ~= nil then
+			type, value = get()
+			print(line(level + 1))
+			print(key .. ": ")
+			inValue(print, level + 1, get, type, value)
+			for _, key in get do
+				type, value = get()
+				print("," .. line(level + 1) .. key .. ": ")
+				inValue(print, level + 1, get, type, value)
+			end
+			print(line(level))
 		end
 		print("}")
+		
 	else
 		print(value)
 	end
@@ -167,6 +185,8 @@ end
 
 print()
 local parseJson = coroutine.wrap(parseJson)
-parseJson('["foobar", "barfoo", {"foo": 1, "bar": null}]', 1)
+parseJson('["foobar", [], "barfoo", {"foo": 1, "bar": null}]', 1)
 -- parseJson(editor:GetText(), 1)
-inValue(parseJson, parseJson())
+local rope = {}
+inValue(function(x) return table.insert(rope, x) end, 0, parseJson, parseJson())
+print(table.concat(rope))
