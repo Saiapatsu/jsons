@@ -1,5 +1,14 @@
 local print = function() end
 
+local function err(where, why)
+	return error("syntax error: " .. why .. " at " .. where)
+end
+
+local function ass(there, where, why)
+	if not there then return err(where, why) end
+	return there
+end
+
 ----------------------------------------
 
 function parseJson(str, where)
@@ -37,8 +46,7 @@ function parseObject(str, where)
 		return there
 	else
 		where = parseMembers(str, where + 1)
-		if where == nil then return end
-		if string.sub(str, where, where) ~= "}" then return end
+		ass(string.sub(str, where, where) == "}", where, "unterminated object")
 		coroutine.yield()
 		return where + 1
 	end
@@ -54,8 +62,7 @@ function parseArray(str, where)
 		return there
 	else
 		where = parseElements(str, where + 1)
-		if where == nil then return end
-		if string.sub(str, where, where) ~= "]" then return end
+		ass(string.sub(str, where, where) == "]", where, "unterminated array")
 		coroutine.yield()
 		return where + 1
 	end
@@ -67,7 +74,7 @@ function parseString(str, where)
 	local after, before = where + 1
 	while true do
 		before, after = string.match(str, '()\\*"()', after)
-		if before == nil then return end
+		ass(before, where, "unterminated string")
 		if ((after - before) & 1) == 1 then
 			coroutine.yield("string", string.sub(str, where, after - 1))
 			return after
@@ -89,9 +96,9 @@ end
 
 function parseOther(str, where)
 	local there
-	there = string.match(str, "^true()", where); if there then coroutine.yield("true", true) return there end
-	there = string.match(str, "^false()", where); if there then coroutine.yield("false", false) return there end
-	there = string.match(str, "^null()", where); if there then coroutine.yield("null", nil) return there end
+	there = string.match(str, "^true()", where); if there then coroutine.yield("true", "true") return there end
+	there = string.match(str, "^false()", where); if there then coroutine.yield("false", "false") return there end
+	there = string.match(str, "^null()", where); if there then coroutine.yield("null", "null") return there end
 end
 
 ----------------------------------------
@@ -99,7 +106,6 @@ end
 function parseMembers(str, where)
 	print("parseMembers", where)
 	where = parseMember(str, where)
-	if where == nil then return end
 	if string.sub(str, where, where) == "," then
 		return parseMembers(str, where + 1)
 	else
@@ -110,7 +116,6 @@ end
 function parseElements(str, where)
 	print("parseElements", where)
 	where = parseElement(str, where)
-	if where == nil then return end
 	if string.sub(str, where, where) == "," then
 		return parseElements(str, where + 1)
 	else
@@ -123,19 +128,16 @@ end
 function parseMember(str, where)
 	print("parseMember", where)
 	where = parseWhitespace(str, where)
-	where = parseString(str, where)
-	if where == nil then return end
+	where = ass(parseString(str, where), where, "expected string")
 	where = parseWhitespace(str, where)
-	where = string.match(str, "^:()", where)
-	if where == nil then return end
+	where = ass(string.match(str, "^:()", where), where, "expected :")
 	return parseElement(str, where)
 end
 
 function parseElement(str, where)
 	print("parseElement", where)
 	where = parseWhitespace(str, where)
-	where = parseValue(str, where)
-	if where == nil then return end
+	where = ass(parseValue(str, where), where, "unrecognizable value")
 	return parseWhitespace(str, where)
 end
 
