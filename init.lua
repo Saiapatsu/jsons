@@ -5,7 +5,7 @@ local function err(where, why)
 end
 
 local function ass(there, where, why)
-	if not there then return err(where, why) end
+	if there == nil then return err(where, why) end
 	return there
 end
 
