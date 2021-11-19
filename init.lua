@@ -1,11 +1,11 @@
 local print = function() end
 
 local function err(where, why)
-	return error("syntax error: " .. why .. " at " .. where)
+	return error("syntax error: " .. why .. " at " .. where, 2)
 end
 
 local function ass(there, where, why)
-	if there == nil then return err(where, why) end
+	if not there then return err(where, why) end
 	return there
 end
 
@@ -32,9 +32,9 @@ function parseJson(str)
 	print("parseJson")
 	local where = 1
 	if string.sub(str, 1, 3) == "\xef\xbb\xbf" then where = 4 end -- UTF-8 BOM
-	where = parseElement(str, where)
-	if where ~= #str + 1 then return err(where, "trailing data") end
-	return where
+	local there = ass(parseElement(str, where), where, "incomplete document")
+	ass(there == #str + 1, there, "trailing data")
+	return there
 end
 
 ----------------------------------------
@@ -121,7 +121,7 @@ function parseString(str, where)
 			what = string.sub(str, after, after)
 			if what == "u" then
 				-- kind of stupid to check for "u" first...
-				what = ass(string.match(str, "^%x%x%x%x", after + 1), "incomplete unicode escape sequence")
+				what = ass(string.match(str, "^%x%x%x%x", after + 1), after, "incomplete unicode escape sequence")
 				if string.sub(str, after + 1, after + 2) ~= "00" then
 					table.insert(rope, string.char(tonumber(string.sub(str, after + 1, after + 2), 16)))
 				end
@@ -132,7 +132,6 @@ function parseString(str, where)
 				what = ass(escapes[what], after, "unrecognized escape sequence")
 				table.insert(rope, what)
 				after = after + 1
-				
 			end
 			
 		else
