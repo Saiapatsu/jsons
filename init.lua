@@ -30,7 +30,9 @@ local
 function parseJson(str)
 	coroutine.yield() -- wait for arguments
 	print("parseJson")
-	local where = parseElement(str, 1)
+	local where = 1
+	if string.sub(str, 1, 3) == "\xef\xbb\xbf" then where = 4 end -- UTF-8 BOM
+	where = parseElement(str, where)
 	if where ~= #str + 1 then return err(where, "trailing data") end
 	return where
 end
@@ -85,17 +87,59 @@ function parseArray(str, where)
 	end
 end
 
+local escapes = {
+	['"'] = '"',
+	["\\"] = "\\",
+	["/"] = "/",
+	["b"] = "\b",
+	["f"] = "\f",
+	["n"] = "\n",
+	["r"] = "\r",
+	["t"] = "\t",
+}
 function parseString(str, where)
+	-- note: this does not validate unicode
+	-- it also probably gets \uxxxx escapes completely wrong
 	print("parseString", where)
 	if string.sub(str, where, where) ~= '"' then return end
-	local after, before = where + 1
+	local there = where + 1
+	local after, what = there
+	local rope = {}
 	while true do
-		before, after = string.match(str, '()\\*"()', after)
-		ass(before, where, "unterminated string")
-		if ((after - before) % 2) == 1 then
-			coroutine.yield("string", string.sub(str, where, after - 1))
+		-- regression: the version of luvit I'm using cannot handle nulls in
+		-- patterns and %c includes del, so unescaped nulls will be permitted in strings
+		after = string.match(str, '^[^\1-\31"\\]*()', after)
+		table.insert(rope, string.sub(str, there, after - 1))
+		what = string.sub(str, after, after)
+		after = after + 1 -- after the "what" character
+		
+		if what == '"' then
+			coroutine.yield("string", table.concat(rope), string.sub(str, where, after - 1))
 			return after
+			
+		elseif what == "\\" then
+			what = string.sub(str, after, after)
+			if what == "u" then
+				-- kind of stupid to check for "u" first...
+				what = ass(string.match(str, "^%x%x%x%x", after + 1), "incomplete unicode escape sequence")
+				if string.sub(str, after + 1, after + 2) ~= "00" then
+					table.insert(rope, string.char(tonumber(string.sub(str, after + 1, after + 2), 16)))
+				end
+				table.insert(rope, string.char(tonumber(string.sub(str, after + 3, after + 4), 16)))
+				after = after + 5
+				
+			else
+				what = ass(escapes[what], after, "unrecognized escape sequence")
+				table.insert(rope, what)
+				after = after + 1
+				
+			end
+			
+		else
+			err(after, "malformed string")
 		end
+		
+		there = after
 	end
 end
 
@@ -107,15 +151,16 @@ function parseNumber(str, where)
 	if where == nil then return end
 	where = string.match(str, "^%.%d+()", where) or where
 	where = string.match(str, "^[eE][-+]?%d+()", where) or where
-	coroutine.yield("number", string.sub(str, there, where - 1))
+	local result = string.sub(str, there, where - 1)
+	coroutine.yield("number", tonumber(result), result) -- yeah just tonumber it
 	return where
 end
 
 function parseOther(str, where)
 	local there
-	there = string.match(str, "^true()", where); if there then coroutine.yield("true", "true") return there end
-	there = string.match(str, "^false()", where); if there then coroutine.yield("false", "false") return there end
-	there = string.match(str, "^null()", where); if there then coroutine.yield("null", "null") return there end
+	there = string.match(str, "^true()", where); if there then coroutine.yield("true", true, "true") return there end
+	there = string.match(str, "^false()", where); if there then coroutine.yield("false", false, "false") return there end
+	there = string.match(str, "^null()", where); if there then coroutine.yield("null", nil, "null") return there end
 end
 
 ----------------------------------------
@@ -161,16 +206,16 @@ end
 ----------------------------------------
 
 local function line(level) return "\n" .. string.rep("\t", level) end
-local function pretty(print, level, get, type, value)
+local function pretty(print, level, get, type, _, value)
 	if type == "array" then
 		print("[")
-		type, value = get()
+		type, _, value = get()
 		if type ~= nil then
 			print(line(level + 1))
-			pretty(print, level + 1, get, type, value)
-			for type, value in get do
+			pretty(print, level + 1, get, type, _, value)
+			for type, _, value in get do
 				print("," .. line(level + 1))
-				pretty(print, level + 1, get, type, value)
+				pretty(print, level + 1, get, type, _, value)
 			end
 			print(line(level))
 		end
@@ -178,16 +223,16 @@ local function pretty(print, level, get, type, value)
 		
 	elseif type == "object" then
 		print("{")
-		local _, key = get()
+		local _, _, key = get()
 		if key ~= nil then
-			type, value = get()
+			type, _, value = get()
 			print(line(level + 1))
 			print(key .. ": ")
-			pretty(print, level + 1, get, type, value)
-			for _, key in get do
-				type, value = get()
+			pretty(print, level + 1, get, type, _, value)
+			for _, _, key in get do
+				type, _, value = get()
 				print("," .. line(level + 1) .. key .. ": ")
-				pretty(print, level + 1, get, type, value)
+				pretty(print, level + 1, get, type, _, value)
 			end
 			print(line(level))
 		end
@@ -222,6 +267,7 @@ function jsons.parser(str)
 	return parser
 end
 
+-- warning: parser() will just skip any UTF-8 BOM, and pretty() does not preserve it
 function jsons.pretty(parser)
 	local rope = {}
 	pretty(
