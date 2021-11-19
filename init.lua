@@ -1,4 +1,6 @@
-local print = function() end
+-- local function trace(...)
+	-- return print(...)
+-- end
 
 local function err(where, why)
 	return error("syntax error: " .. why .. " at " .. where, 2)
@@ -29,7 +31,7 @@ local
 
 function parseJson(str)
 	coroutine.yield() -- wait for arguments
-	print("parseJson")
+	-- trace("parseJson")
 	local where = 1
 	if string.sub(str, 1, 3) == "\xef\xbb\xbf" then where = 4 end -- UTF-8 BOM
 	local there = ass(parseElement(str, where), where, "incomplete document")
@@ -40,12 +42,12 @@ end
 ----------------------------------------
 
 function parseWhitespace(str, where)
-	print("parseWhitespace", where)
+	-- trace("parseWhitespace", where)
 	return string.match(str, "^[ \r\n\t]*()", where)
 end
 
 function parseValue(str, where)
-	print("parseValue", where)
+	-- trace("parseValue", where)
 	return parseObject(str, where)
 	or     parseArray(str, where)
 	or     parseString(str, where)
@@ -56,7 +58,7 @@ end
 ----------------------------------------
 
 function parseObject(str, where)
-	print("parseObject", where)
+	-- trace("parseObject", where)
 	if string.sub(str, where, where) ~= "{" then return end
 	coroutine.yield("object")
 	local there = string.match(str, "^[ \r\n\t]*}()", where + 1)
@@ -72,7 +74,7 @@ function parseObject(str, where)
 end
 
 function parseArray(str, where)
-	print("parseArray", where)
+	-- trace("parseArray", where)
 	if string.sub(str, where, where) ~= "[" then return end
 	coroutine.yield("array")
 	local there = string.match(str, "^[ \r\n\t]*%]()", where + 1)
@@ -100,7 +102,7 @@ local escapes = {
 function parseString(str, where)
 	-- note: this does not validate unicode
 	-- it also probably gets \uxxxx escapes completely wrong
-	print("parseString", where)
+	-- trace("parseString", where)
 	if string.sub(str, where, where) ~= '"' then return end
 	local there = where + 1
 	local after, what = there
@@ -143,7 +145,7 @@ function parseString(str, where)
 end
 
 function parseNumber(str, where)
-	print("parseNumber", where)
+	-- trace("parseNumber", where)
 	local there = where
 	where = string.match(str, "^-()", where) or where
 	where = string.match(str, "^0()", where) or string.match(str, "^%d+()", where)
@@ -165,7 +167,7 @@ end
 ----------------------------------------
 
 function parseMembers(str, where)
-	print("parseMembers", where)
+	-- trace("parseMembers", where)
 	where = parseMember(str, where)
 	if string.sub(str, where, where) == "," then
 		return parseMembers(str, where + 1)
@@ -175,7 +177,7 @@ function parseMembers(str, where)
 end
 
 function parseElements(str, where)
-	print("parseElements", where)
+	-- trace("parseElements", where)
 	where = parseElement(str, where)
 	if string.sub(str, where, where) == "," then
 		return parseElements(str, where + 1)
@@ -187,7 +189,7 @@ end
 ----------------------------------------
 
 function parseMember(str, where)
-	print("parseMember", where)
+	-- trace("parseMember", where)
 	where = parseWhitespace(str, where)
 	where = ass(parseString(str, where), where, "expected string")
 	where = parseWhitespace(str, where)
@@ -196,7 +198,7 @@ function parseMember(str, where)
 end
 
 function parseElement(str, where)
-	print("parseElement", where)
+	-- trace("parseElement", where)
 	where = parseWhitespace(str, where)
 	where = ass(parseValue(str, where), where, "unrecognizable value")
 	return parseWhitespace(str, where)
