@@ -90,7 +90,7 @@ function parseString(str, where)
 	while true do
 		before, after = string.match(str, '()\\*"()', after)
 		ass(before, where, "unterminated string")
-		if ((after - before) & 1) == 1 then
+		if ((after - before) % 2) == 1 then
 			coroutine.yield("string", string.sub(str, where, after - 1))
 			return after
 		end
