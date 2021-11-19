@@ -27,10 +27,12 @@ local
 
 ----------------------------------------
 
-function parseJson(str, where)
+function parseJson(str)
 	coroutine.yield() -- wait for arguments
-	print("parseJson", where)
-	return parseElement(str, where)
+	print("parseJson")
+	local where = parseElement(str, 1)
+	if where ~= #str + 1 then return err(where, "trailing data") end
+	return where
 end
 
 ----------------------------------------
@@ -214,9 +216,9 @@ print(table.concat(rope))
 
 local jsons = {}
 
-function jsons.parser(str, where)
+function jsons.parser(str)
 	local parser = coroutine.wrap(parseJson)
-	parser(str, where or 1)
+	parser(str)
 	return parser
 end
 
@@ -228,6 +230,7 @@ function jsons.pretty(parser)
 		parser,
 		parser()
 	)
+	parser() -- check for trailing data
 	return table.concat(rope)
 end
 
