@@ -5,10 +5,8 @@
 local function err(where, why)
 	return error("syntax error: " .. why .. " at " .. where, 2)
 end
-
 local function ass(there, where, why)
-	if not there then return err(where, why) end
-	return there
+	return there or error("syntax error: " .. why .. " at " .. where, 2)
 end
 
 ----------------------------------------
