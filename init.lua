@@ -297,15 +297,15 @@ local function pretty(print, level, get, type, value)
 	end
 end
 
-local function linear(print, get, type, value)
+local function minify(print, get, type, value)
 	if type == "array" then
 		print("[")
 		type, value = get()
 		if type ~= nil then
-			linear(print, get, type, value)
+			minify(print, get, type, value)
 			for type, value in get do
 				print(",")
-				linear(print, get, type, value)
+				minify(print, get, type, value)
 			end
 		end
 		print("]")
@@ -316,11 +316,11 @@ local function linear(print, get, type, value)
 		if key ~= nil then
 			type, value = get()
 			print(key .. ":")
-			linear(print, get, type, value)
+			minify(print, get, type, value)
 			for key, key in get do
 				type, value = get()
 				print("," .. key .. ":")
-				linear(print, get, type, value)
+				minify(print, get, type, value)
 			end
 		end
 		print("}")
@@ -371,13 +371,13 @@ function jsons.pretty(parser)
 	return table.concat(rope)
 end
 
-function jsons.linear(parser)
+function jsons.minify(parser)
 	local rope = {}
 	local function parser2()
 		local type, value, value, value = parser()
 		return type, value
 	end
-	linear(
+	minify(
 		function(x) return table.insert(rope, x) end,
 		parser2,
 		parser2()
