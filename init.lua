@@ -106,10 +106,9 @@ function parseString(str, where)
 	local after, what = there
 	local rope = {}
 	while true do
-		-- regression: the version of luvit I'm using cannot handle nulls in
-		-- patterns and %c includes del, so unescaped nulls will be permitted in strings
-		after = string.match(str, '^[^\1-\31"\\]*()', after)
-		table.insert(rope, string.sub(str, there, after - 1))
+		-- after = string.match(str, '^[^\0-\31"\\]*()', after)
+		after = string.match(str, "^[\32\33\35-\90%[%]\94-\255]*()", after)
+		if (there ~= after) then table.insert(rope, string.sub(str, there, after - 1)) end
 		what = string.sub(str, after, after)
 		after = after + 1 -- after the "what" character
 		
