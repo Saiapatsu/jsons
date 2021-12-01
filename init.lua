@@ -145,7 +145,7 @@ end
 function parseNumber(str, where)
 	-- trace("parseNumber", where)
 	local there = where
-	where = string.match(str, "^-()", where) or where
+	if string.sub(str, where, where) == "-" then where = where + 1 end
 	where = string.match(str, "^0()", where) or string.match(str, "^%d+()", where)
 	if where == nil then return end
 	where = string.match(str, "^%.%d+()", where) or where
@@ -156,10 +156,9 @@ function parseNumber(str, where)
 end
 
 function parseOther(str, where)
-	local there
-	there = string.match(str, "^true()", where); if there then coroutine.yield("true", true, "true") return there end
-	there = string.match(str, "^false()", where); if there then coroutine.yield("false", false, "false") return there end
-	there = string.match(str, "^null()", where); if there then coroutine.yield("null", nil, "null") return there end
+	if string.sub(str, where, where + 3) == "true"  then coroutine.yield("true" , true , "true" ) return where + 4 end
+	if string.sub(str, where, where + 4) == "false" then coroutine.yield("false", false, "false") return where + 5 end
+	if string.sub(str, where, where + 3) == "null"  then coroutine.yield("null" , nil  , "null" ) return where + 4 end
 end
 
 ----------------------------------------
@@ -189,8 +188,8 @@ function parseMember(str, where)
 	where = parseWhitespace(str, where)
 	where = ass(parseString(str, where), where, "expected string")
 	where = parseWhitespace(str, where)
-	where = ass(string.match(str, "^:()", where), where, "expected :")
-	return parseElement(str, where)
+	ass(string.sub(str, where, where) == ":", where, "expected :")
+	return parseElement(str, where + 1)
 end
 
 function parseElement(str, where)
