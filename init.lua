@@ -7,6 +7,7 @@ usage:
 get an iterator with jsons.parser(str)
 or get a pretty json string with jsons.pretty(str)
 or get a minified json string with jsons.minify(str)
+where str is a string containing one json value
 
 iterator will return 0, 2 or 4 values:
 	type: one of: nil, "object", "array", "string", "number", "boolean", "nil"
@@ -52,6 +53,12 @@ the verbatim value
 
 this parser was created primarily with pretty-printing/beautification
 and linearization/minification in mind, hence the "verbatim" return value
+in addition, Lua has no "null" type that's separate from "nil"
+
+use for anything else but the above at your own risk, because it has
+never been used for anything else
+
+(not to be confused with jsons for Python)
 
 ]]
 
