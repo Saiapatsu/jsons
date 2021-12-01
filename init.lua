@@ -1,9 +1,12 @@
 --[[
+
 jsons
 =====
 
 usage:
 get an iterator with jsons.parser(str)
+or get a pretty json string with jsons.pretty(str)
+or get a minified json string with jsons.minify(str)
 
 iterator will return 0, 2 or 4 values:
 	type: one of: nil, "object", "array", "string", "number", "boolean", "nil"
@@ -52,7 +55,7 @@ and linearization/minification in mind, hence the "verbatim" return value
 
 ]]
 
-
+----------------------------------------
 
 -- local function trace(...)
 	-- return print(...)
