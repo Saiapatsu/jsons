@@ -88,9 +88,9 @@ function parseJson(str)
 	-- trace("parseJson")
 	local where = 1
 	if string.sub(str, 1, 3) == "\xef\xbb\xbf" then where = 4 end -- UTF-8 BOM
-	local there = ass(parseElement(str, where), where, "incomplete document")
-	ass(there == #str + 1, there, "trailing data")
-	return there
+	where = parseElement(str, where)
+	ass(where == #str + 1, where, "trailing data")
+	return where
 end
 
 ----------------------------------------
