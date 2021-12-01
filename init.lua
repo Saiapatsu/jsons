@@ -167,21 +167,19 @@ end
 function parseMembers(str, where)
 	-- trace("parseMembers", where)
 	where = parseMember(str, where)
-	if string.sub(str, where, where) == "," then
-		return parseMembers(str, where + 1)
-	else
-		return where
+	while string.sub(str, where, where) == "," do
+		where = parseMember(str, where + 1)
 	end
+	return where
 end
 
 function parseElements(str, where)
 	-- trace("parseElements", where)
 	where = parseElement(str, where)
-	if string.sub(str, where, where) == "," then
-		return parseElements(str, where + 1)
-	else
-		return where
+	while string.sub(str, where, where) == "," do
+		where = parseElement(str, where + 1)
 	end
+	return where
 end
 
 ----------------------------------------
