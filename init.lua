@@ -59,7 +59,7 @@ end
 function parseObject(str, where)
 	-- trace("parseObject", where)
 	if string.sub(str, where, where) ~= "{" then return end
-	coroutine.yield("object")
+	coroutine.yield("object", where)
 	local there = string.match(str, "^[ \r\n\t]*}()", where + 1)
 	if there then
 		coroutine.yield()
@@ -75,7 +75,7 @@ end
 function parseArray(str, where)
 	-- trace("parseArray", where)
 	if string.sub(str, where, where) ~= "[" then return end
-	coroutine.yield("array")
+	coroutine.yield("array", where)
 	local there = string.match(str, "^[ \r\n\t]*%]()", where + 1)
 	if there then
 		coroutine.yield()
@@ -114,7 +114,7 @@ function parseString(str, where)
 		after = after + 1 -- after the "what" character
 		
 		if what == '"' then
-			coroutine.yield("string", table.concat(rope), string.sub(str, where, after - 1))
+			coroutine.yield("string", where, table.concat(rope), string.sub(str, where, after - 1))
 			return after
 			
 		elseif what == "\\" then
@@ -151,14 +151,14 @@ function parseNumber(str, where)
 	where = string.match(str, "^%.%d+()", where) or where
 	where = string.match(str, "^[eE][-+]?%d+()", where) or where
 	local result = string.sub(str, there, where - 1)
-	coroutine.yield("number", tonumber(result), result) -- yeah just tonumber it
+	coroutine.yield("number", there, tonumber(result), result) -- yeah just tonumber it
 	return where
 end
 
 function parseOther(str, where)
-	if string.sub(str, where, where + 3) == "true"  then coroutine.yield("true" , true , "true" ) return where + 4 end
-	if string.sub(str, where, where + 4) == "false" then coroutine.yield("false", false, "false") return where + 5 end
-	if string.sub(str, where, where + 3) == "null"  then coroutine.yield("null" , nil  , "null" ) return where + 4 end
+	if string.sub(str, where, where + 3) == "true"  then coroutine.yield("boolean", where, true , "true" ) return where + 4 end
+	if string.sub(str, where, where + 4) == "false" then coroutine.yield("boolean", where, false, "false") return where + 5 end
+	if string.sub(str, where, where + 3) == "null"  then coroutine.yield("nil"    , where, nil  , "null" ) return where + 4 end
 end
 
 ----------------------------------------
@@ -202,16 +202,19 @@ end
 ----------------------------------------
 
 local function line(level) return "\n" .. string.rep("\t", level) end
-local function pretty(print, level, get, type, _, value)
+
+-- the quick rundown on this function:
+-- get a value to represent
+local function pretty(print, level, get, type, value)
 	if type == "array" then
 		print("[")
-		type, _, value = get()
+		type, value = get()
 		if type ~= nil then
 			print(line(level + 1))
-			pretty(print, level + 1, get, type, _, value)
-			for type, _, value in get do
+			pretty(print, level + 1, get, type, value)
+			for type, value in get do
 				print("," .. line(level + 1))
-				pretty(print, level + 1, get, type, _, value)
+				pretty(print, level + 1, get, type, value)
 			end
 			print(line(level))
 		end
@@ -219,16 +222,15 @@ local function pretty(print, level, get, type, _, value)
 		
 	elseif type == "object" then
 		print("{")
-		local _, _, key = get()
+		local key, key = get()
 		if key ~= nil then
-			type, _, value = get()
-			print(line(level + 1))
-			print(key .. ": ")
-			pretty(print, level + 1, get, type, _, value)
-			for _, _, key in get do
-				type, _, value = get()
+			type, value = get()
+			print(line(level + 1) .. key .. ": ")
+			pretty(print, level + 1, get, type, value)
+			for key, key in get do
+				type, value = get()
 				print("," .. line(level + 1) .. key .. ": ")
-				pretty(print, level + 1, get, type, _, value)
+				pretty(print, level + 1, get, type, value)
 			end
 			print(line(level))
 		end
@@ -239,30 +241,30 @@ local function pretty(print, level, get, type, _, value)
 	end
 end
 
-local function linear(print, get, type, _, value)
+local function linear(print, get, type, value)
 	if type == "array" then
 		print("[")
-		type, _, value = get()
+		type, value = get()
 		if type ~= nil then
-			linear(print, get, type, _, value)
-			for type, _, value in get do
+			linear(print, get, type, value)
+			for type, value in get do
 				print(",")
-				linear(print, get, type, _, value)
+				linear(print, get, type, value)
 			end
 		end
 		print("]")
 		
 	elseif type == "object" then
 		print("{")
-		local _, _, key = get()
+		local key, key = get()
 		if key ~= nil then
-			type, _, value = get()
+			type, value = get()
 			print(key .. ":")
-			linear(print, get, type, _, value)
-			for _, _, key in get do
-				type, _, value = get()
+			linear(print, get, type, value)
+			for key, key in get do
+				type, value = get()
 				print("," .. key .. ":")
-				linear(print, get, type, _, value)
+				linear(print, get, type, value)
 			end
 		end
 		print("}")
@@ -299,11 +301,15 @@ end
 -- warning: parser() will just skip any UTF-8 BOM, and pretty() does not preserve it
 function jsons.pretty(parser)
 	local rope = {}
+	local function parser2()
+		local type, value, value, value = parser()
+		return type, value
+	end
 	pretty(
 		function(x) return table.insert(rope, x) end,
 		0,
-		parser,
-		parser()
+		parser2,
+		parser2()
 	)
 	parser() -- check for trailing data
 	return table.concat(rope)
@@ -311,10 +317,14 @@ end
 
 function jsons.linear(parser)
 	local rope = {}
+	local function parser2()
+		local type, value, value, value = parser()
+		return type, value
+	end
 	linear(
 		function(x) return table.insert(rope, x) end,
-		parser,
-		parser()
+		parser2,
+		parser2()
 	)
 	parser() -- check for trailing data
 	return table.concat(rope)
