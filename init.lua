@@ -28,7 +28,7 @@ local
 ----------------------------------------
 
 function parseJson(str)
-	coroutine.yield() -- wait for arguments
+	coroutine.yield() -- take str argument from jsons.parser() and wait for the actual user
 	-- trace("parseJson")
 	local where = 1
 	if string.sub(str, 1, 3) == "\xef\xbb\xbf" then where = 4 end -- UTF-8 BOM
@@ -41,6 +41,7 @@ end
 
 function parseWhitespace(str, where)
 	-- trace("parseWhitespace", where)
+	-- see also: empty element detection in parseArray and parseObject
 	return string.match(str, "^[ \r\n\t]*()", where)
 end
 
