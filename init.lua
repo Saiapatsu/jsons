@@ -244,6 +244,39 @@ local function pretty(print, level, get, type, _, value)
 	end
 end
 
+local function linear(print, get, type, _, value)
+	if type == "array" then
+		print("[")
+		type, _, value = get()
+		if type ~= nil then
+			linear(print, get, type, _, value)
+			for type, _, value in get do
+				print(",")
+				linear(print, get, type, _, value)
+			end
+		end
+		print("]")
+		
+	elseif type == "object" then
+		print("{")
+		local _, _, key = get()
+		if key ~= nil then
+			type, _, value = get()
+			print(key .. ":")
+			linear(print, get, type, _, value)
+			for _, _, key in get do
+				type, _, value = get()
+				print("," .. key .. ":")
+				linear(print, get, type, _, value)
+			end
+		end
+		print("}")
+		
+	else
+		print(value)
+	end
+end
+
 ----------------------------------------
 
 -- testing
@@ -274,6 +307,17 @@ function jsons.pretty(parser)
 	pretty(
 		function(x) return table.insert(rope, x) end,
 		0,
+		parser,
+		parser()
+	)
+	parser() -- check for trailing data
+	return table.concat(rope)
+end
+
+function jsons.linear(parser)
+	local rope = {}
+	linear(
+		function(x) return table.insert(rope, x) end,
 		parser,
 		parser()
 	)
