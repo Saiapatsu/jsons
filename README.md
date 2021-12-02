@@ -70,7 +70,7 @@ just make a function that calls the iterator and returns only the ones you want:
 ```lua
 local parser = jsons.parser(str)
 local function parser2()
-	local type, value, value, value = parser()
+	local type, value, value = parser()
 	return type, value
 end
 ```
