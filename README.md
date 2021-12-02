@@ -1,11 +1,12 @@
 # jsons
 
 ## Usage
+
 Get an iterator with `jsons.parser(str)`,  
 where str is a string containing one json value.
 
 Get a pretty json string with `jsons.pretty(iter)`  
-or a minified json string with `jsons.minify(iter)`,
+or a minified json string with `jsons.minify(iter)`.
 
 The iterator will return 0, 2 or 4 values:
 * type: one of: nil, "object", "array", "string", "number", "boolean", "nil";
@@ -14,7 +15,7 @@ The iterator will return 0, 2 or 4 values:
 * * value: value of the above Lua type;
 * * valuestr: string, the value copied verbatim from str.
 
-An "object" or "array" type opens one, and a nil closes either.  
+An "object" or "array" type opens one and a nil closes either.  
 Use a for loop to iterate over their contents.
 
 Example input:
@@ -62,6 +63,7 @@ for k,v in ipairs(arr("[1, 2, [], 4, 5]")) do print(k, v) end
 ```
 
 ## Afterword
+
 The iterator throws syntax errors when it encounters them.  
 Thus, avoid causing side effects until the entire document has been parsed.
 
@@ -74,22 +76,16 @@ local function parser2()
 	return type, value
 end
 ```
-This will return only the type and the lua value, but not the location or
+This will return only the type and the value, but not the position or
 the verbatim value.
 
 This parser was created primarily with pretty-printing/beautification
 and linearization/minification in mind, hence the "verbatim" return value.  
 In addition, Lua's nil is not JSON's null.
 
+It does not validate the UTF-8 within strings.
+
 Use for anything else but the above at your own risk, because it has
 never been used for anything else.
-
-This might be better called a JSON tokenizer, although unlike another similar
-streaming parser I just looked at, it does not emit commas, colons, separate
-end tokens for arrays and objects etc.  
-OTOH, the parser alone is a solid validator.
-
-Speaking of validation, it does not care whether the contents of
-strings are valid Unicode.  
 
 (not to be confused with jsons for Python)
