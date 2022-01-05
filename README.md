@@ -62,7 +62,7 @@ for k,v in ipairs(arr("[1, 2, 3, 4, 5]")) do print(k, v) end
 for k,v in ipairs(arr("[1, 2, [], 4, 5]")) do print(k, v) end
 ```
 
-## Afterword
+## Notes
 
 The iterator throws syntax errors when it encounters them.  
 Thus, avoid causing side effects until the entire document has been parsed.
@@ -79,13 +79,13 @@ end
 This will return only the type and the value, but not the position or
 the verbatim value.
 
-This parser was created primarily with pretty-printing/beautification
-and linearization/minification in mind, hence the "verbatim" return value.  
-In addition, Lua's nil is not JSON's null.
-
 It does not validate the UTF-8 within strings.
+
+## Motivation
+
+This library was created for a pretty-printing/beautification command for
+the text editor I use. The point is to be non-destructive - a DOM parser
+might rearrange values in objects and mistreat nulls.
 
 Use for anything else but the above at your own risk, because it has
 never been used for anything else.
-
-(not to be confused with jsons for Python)
