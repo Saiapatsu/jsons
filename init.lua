@@ -203,7 +203,8 @@ end
 local function line(level) return "\n" .. string.rep("\t", level) end
 
 -- the quick rundown on this function:
--- get a value to represent
+-- print() is output, get() is input,
+-- level is indentation, type and value act as one token of lookahead
 local function pretty(print, level, get, type, value)
 	if type == "array" then
 		print("[")
@@ -272,20 +273,6 @@ local function minify(print, get, type, value)
 		print(value)
 	end
 end
-
-----------------------------------------
-
--- testing
---[[
-local print = _G.print
-print()
-local parseJson = coroutine.wrap(parseJson)
-parseJson('["foobar", [], "barfoo", {"foo": 1, "bar": null}]', 1)
--- parseJson(editor:GetText(), 1)
-local rope = {}
-inValue(function(x) return table.insert(rope, x) end, 0, parseJson, parseJson())
-print(table.concat(rope))
-]]
 
 ----------------------------------------
 
