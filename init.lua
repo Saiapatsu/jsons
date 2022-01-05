@@ -1,3 +1,9 @@
+
+-- (c) twiswist 2022
+-- Permission to use, copy, modify, and/or distribute this software for
+-- any purpose with or without fee is hereby granted. This software is
+-- offered as-is, without any warranty.
+
 -- local function trace(...)
 	-- return print(...)
 -- end
